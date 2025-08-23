@@ -1,4 +1,6 @@
+تفضل النسخة الكاملة محدثة بالخطوات الثلاث (RNG + shuffle + تعديل pick + خلط المراقبين والغرف). انسخ الملف كاملًا واستبدل ملفك:
 
+```html
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -131,6 +133,19 @@
     const byId = (id)=>document.getElementById(id);
     const pairKey=(a,b)=>{const t=[a,b].sort((x,y)=> x.localeCompare(y,'ar'));return t[0]+' | '+t[1]};
 
+    // RNG ثابت لكل توليد (يتغير بين المرّات) + خلط فيشر-ياتس
+    const rng = (()=>{ 
+      const buf = new Uint32Array(1);
+      return ()=> (crypto.getRandomValues(buf), buf[0] / 2**32);
+    })();
+    function shuffle(arr){
+      for(let i = arr.length - 1; i > 0; i--){
+        const j = Math.floor(rng() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
     // للعرض داخل الصفحة فقط
     const LRM='\u200E';
     const ltr=(s)=> LRM + String(s);
@@ -184,11 +199,39 @@
         sc += pen; const same=roomMembers.filter(x=>x.cat===m.cat).length; if(same>0) sc += 0.9*same; const hasAB=roomMembers.some(x=>x.cat==='A'||x.cat==='B'); if(!hasAB && (m.cat==='A'||m.cat==='B')) sc -= 0.9; if(roomMembers.some(x=>x.cat==='A') && m.cat==='B') sc -= 0.4; if(roomMembers.some(x=>x.cat==='B') && m.cat==='A') sc -= 0.4; }
       const deficit=Math.max(0,m.target-m.count); sc -= 0.08*deficit; return sc; }
 
-    const pick=(pool,day,roomMembers,curRoomId)=>{ let best=null,bs=Infinity; for(const m of pool){ const sc=score(m,day,roomMembers,curRoomId); if(sc<bs){bs=sc;best=m;} } return best };
+    // تعديل pick: ضجيج صغير + اختيار عشوائي من أفضل المتعادلين
+    const pick = (pool, day, roomMembers, curRoomId) => {
+      const eps = 1e-6;
+      let bestScore = Infinity;
+      let best = [];
+      for (const m of pool){
+        const sc = score(m, day, roomMembers, curRoomId) + (rng() - 0.5) * 1e-3;
+        if (sc < bestScore - eps){
+          bestScore = sc;
+          best = [m];
+        } else if (Math.abs(sc - bestScore) <= eps){
+          best.push(m);
+        }
+      }
+      if (!best.length) return null;
+      return best[Math.floor(rng() * best.length)];
+    };
 
     window.assign=function(){
       const s=window.state; s.schedule=[]; s.pairings=new Map();
-      const buildRooms=()=>{ const rooms=[]; let i=1; for(let k=0;k<s.r2;k++) rooms.push({id:`قاعة ${i++}`,capacity:2}); for(let k=0;k<s.r3;k++) rooms.push({id:`قاعة ${i++}`,capacity:3}); for(let k=0;k<s.r4;k++) rooms.push({id:`قاعة ${i++}`,capacity:4}); return rooms };
+
+      // خلط ترتيب المراقبين في كل توليد
+      shuffle(s.monitors);
+
+      const buildRooms = () => {
+        const rooms = [];
+        let i = 1;
+        for(let k=0;k<s.r2;k++) rooms.push({id:`قاعة ${i++}`,capacity:2});
+        for(let k=0;k<s.r3;k++) rooms.push({id:`قاعة ${i++}`,capacity:3});
+        for(let k=0;k<s.r4;k++) rooms.push({id:`قاعة ${i++}`,capacity:4});
+        return shuffle(rooms); // خلط الغرف أيضاً
+      };
+
       for(let day=1; day<=s.days; day++){
         const rooms=buildRooms();
         const plan={day,rooms:[],reserves:[],warnings:[]};
@@ -428,7 +471,21 @@
     }
 
     // وصل الأزرار
-    byId('generate').addEventListener('click', ()=>{ try{ readInputs(); const {msgs}=validate(); if(msgs.length) $('#warnings').innerHTML = msgs.map(m=>`<div class="warn">${m}</div>`).join(''); for(const m of state.monitors) m.assigned=[]; computeTargets(2*state.r2 + 3*state.r3 + 4*state.r4); assign(); render(); }catch(e){ console.error(e); $('#warnings').innerHTML = `<div class="danger">خطأ: ${e && e.message ? e.message : e}`; alert('خطأ أثناء التوليد: '+(e&&e.message?e.message:e)); }});
+    byId('generate').addEventListener('click', ()=>{ 
+      try{ 
+        readInputs(); 
+        const {msgs}=validate(); 
+        if(msgs.length) $('#warnings').innerHTML = msgs.map(m=>`<div class="warn">${m}</div>`).join('');
+        for(const m of state.monitors) m.assigned=[];
+        computeTargets(2*state.r2 + 3*state.r3 + 4*state.r4);
+        assign();
+        render(); 
+      }catch(e){ 
+        console.error(e); 
+        $('#warnings').innerHTML = `<div class="danger">خطأ: ${e && e.message ? e.message : e}`; 
+        alert('خطأ أثناء التوليد: '+(e&&e.message?e.message:e)); 
+      }
+    });
     byId('exportExcel').addEventListener('click', ()=>{ try{ exportExcel(); }catch(e){ alert('تعذّر التصدير: '+(e&&e.message?e.message:e)); }});
     byId('exportCSV').addEventListener('click', ()=>{ try{ exportCSV(); }catch(e){ alert('تعذّر التصدير: '+(e&&e.message?e.message:e)); }});
     byId('exportRepeats').addEventListener('click', ()=>{ try{ exportRepeats(); }catch(e){ alert('تعذّر تصدير التكرارات: '+(e&&e.message?e.message:e)); }});
@@ -441,5 +498,3 @@
 </body>
 </html>
 ```
-
-
