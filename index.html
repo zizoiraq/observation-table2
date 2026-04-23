@@ -73,9 +73,10 @@
     .row{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
     .field-4{grid-column:span 4}.field-6{grid-column:span 6}.field-12{grid-column:span 12}
     label{display:block;margin-bottom:6px;color:var(--text-dim);font-weight:700}
-    input[type=number], input[type=text]{
-      width:100%;padding:12px 14px;border-radius:14px;background:var(--input-bg);border:1px solid var(--input-bd);color:var(--text);font-size:15px;outline:none
+    input[type=number], input[type=text], textarea{
+      width:100%;padding:12px 14px;border-radius:14px;background:var(--input-bg);border:1px solid var(--input-bd);color:var(--text);font-size:15px;outline:none;font-family:'Tajawal',sans-serif
     }
+    textarea{resize:vertical;min-height:120px}
     .switch{display:flex;align-items:center;gap:10px}
     .switch input{width:20px;height:20px}
 
@@ -83,6 +84,7 @@
     button{cursor:pointer;border-radius:14px;padding:12px 16px;font-weight:800;font-size:15px;border:1px solid transparent}
     .btn{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#041024}
     .btn-outline{background:transparent;border-color:var(--muted);color:var(--text)}
+    .btn-sm{padding:8px 12px;font-size:13px}
 
     .schedule{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
     .day{border:1px solid var(--muted);border-radius:18px;background:var(--panel);padding:12px}
@@ -94,9 +96,13 @@
     .chip.A{border-color:#89a7ff}.chip.B{border-color:#a8f5ff}.chip.C{border-color:#9affc3}.chip.D{border-color:#ffd38a}
     .warn{color:var(--warn);font-size:12px;margin-top:6px}.ok{color:var(--ok);font-size:12px;margin-top:6px}.danger{color:var(--danger);font-size:12px;margin-top:6px}
 
-    .stats-table{width:100%;border-collapse:separate;border-spacing:0 8px}
-    .stats-table th,.stats-table td{padding:8px 12px;background:var(--table-bg);border:1px solid var(--table-bd)}
-    .stats-table th{background:var(--table-head)}
+    .stats-table{width:100%;border-collapse:collapse;border-spacing:0;margin-top:10px}
+    .stats-table th,.stats-table td{padding:8px 12px;border:1px solid var(--table-bd);text-align:center}
+    .stats-table th{background:var(--table-head);position:sticky;top:0}
+    .stats-table .dash-cell{color:var(--text-dim);font-weight:bold}
+    .stats-table .room-cell{background:var(--chip-bg);border-radius:4px;font-weight:500}
+    .stats-table .reserve-cell{background:var(--warn);color:#000;border-radius:4px;font-weight:500}
+    
     .small{font-size:12px;color:var(--text-dim)}
     .subhead{margin:10px 0 6px;font-weight:800}
     .list{margin:0;padding-inline-start:18px}
@@ -110,8 +116,12 @@
     .hint{font-size:12px;color:var(--text-dim);margin-top:6px}
     .note{margin-top:8px;font-size:13px;padding:10px 12px;border:1px dashed var(--warn);border-radius:12px;color:var(--text)}
 
-    /* لوحة أوامر بعرض الشاشة وتكون ثابتة لطيفة */
-    
+    /* تمرير الجدول إذا كان عريضاً */
+    .table-wrapper{overflow-x:auto;margin-top:15px;border-radius:14px}
+
+    /* شبكة الأسماء */
+    .names-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin-top:10px}
+    .name-col{display:flex;flex-direction:column;gap:5px}
   </style>
 </head>
 <body>
@@ -153,15 +163,53 @@
         <h2>عدد المراقبين حسب الصنف</h2>
         <span class="small">A دكتوراه • B ماجستير • C بكالوريوس • D إداريون (نصف عبء)</span>
         <div class="row" style="margin-top:12px">
-          <div class="field-6"><label for="cntA">عدد مراقبي صنف A</label><input type="number" id="cntA" min="0" value="10"></div>
-          <div class="field-6"><label for="cntB">عدد مراقبي صنف B</label><input type="number" id="cntB" min="0" value="15"></div>
-          <div class="field-6"><label for="cntC">عدد مراقبي صنف C</label><input type="number" id="cntC" min="0" value="20"></div>
-          <div class="field-6"><label for="cntD">عدد مراقبي صنف D</label><input type="number" id="cntD" min="0" value="8"></div>
+          <div class="field-6"><label for="cntA">عدد مراقبي صنف A</label><input type="number" id="cntA" min="0" value="3"></div>
+          <div class="field-6"><label for="cntB">عدد مراقبي صنف B</label><input type="number" id="cntB" min="0" value="3"></div>
+          <div class="field-6"><label for="cntC">عدد مراقبي صنف C</label><input type="number" id="cntC" min="0" value="3"></div>
+          <div class="field-6"><label for="cntD">عدد مراقبي صنف D</label><input type="number" id="cntD" min="0" value="3"></div>
         </div>
       </section>
     </div>
 
-    <!-- لوحة الأوامر بعرض الشاشة وتحت الصف الأول -->
+    <!-- ===== قسم إدخال الأسماء الجديد ===== -->
+    <section class="card" style="margin-top:18px">
+      <h2>إدخال أسماء المراقبين</h2>
+      <div class="names-grid">
+        <div class="name-col">
+          <label>الفئة A (دكتوراه)</label>
+          <textarea id="namesA" rows="6" placeholder="الصق الأسماء هنا&#10;كل اسم في سطر">أحمد
+محمود
+لمى</textarea>
+        </div>
+        <div class="name-col">
+          <label>الفئة B (ماجستير)</label>
+          <textarea id="namesB" rows="6" placeholder="الصق الأسماء هنا&#10;كل اسم في سطر">سارة
+علي
+نور</textarea>
+        </div>
+        <div class="name-col">
+          <label>الفئة C (بكالوريوس)</label>
+          <textarea id="namesC" rows="6" placeholder="الصق الأسماء هنا&#10;كل اسم في سطر">كاظم
+زينب
+حسين</textarea>
+        </div>
+        <div class="name-col">
+          <label>الفئة D (إداريون)</label>
+          <textarea id="namesD" rows="6" placeholder="الصق الأسماء هنا&#10;كل اسم في سطر">رائد
+سعد
+هدى</textarea>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap">
+        <button class="btn-outline btn-sm" id="generateDefaultNames">توليد أسماء افتراضية (A1, A2...)</button>
+        <button class="btn-outline btn-sm" id="clearNames">تفريغ الكل</button>
+      </div>
+      <div class="small" style="margin-top:10px">
+        💡 يمكنك لصق الأسماء مباشرة من Excel (انسخ العمود والصق هنا) - عدد الأسماء يجب أن يطابق الأعداد المدخلة أعلاه
+      </div>
+    </section>
+
+    <!-- لوحة الأوامر -->
     <section class="sticky-actions" style="margin-top:18px">
       <div class="card">
         <h2>أوامر</h2>
@@ -198,7 +246,7 @@
 
     <!-- الإحصائيات -->
     <section class="card" style="margin-top:18px">
-      <h2>إحصائية لكل مراقب</h2>
+      <h2>إحصائية لكل مراقب (حسب الأيام)</h2>
       <div id="stats"></div>
       <div id="repeats"></div>
     </section>
@@ -222,7 +270,6 @@
       const cur=document.documentElement.getAttribute('data-theme')||'dark';
       setTheme(cur==='dark'?'light':'dark');
     });
-    // تحميل تفضيل سابق
     try{
       const saved=localStorage.getItem(THEME_KEY);
       if(saved==='light' || saved==='dark') setTheme(saved);
@@ -236,7 +283,7 @@
     const stripBidi = (s)=> String(s).replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g,'');
     const TEAM_SEP_EXPORT = ' - ';
 
-    // ترتيب طبيعي للأسماء (قاعة 2 قبل قاعة 10)
+    // ترتيب طبيعي
     const natNum = s => { const m = String(s).match(/(\d+)/g); return m? m.map(x=>+x) : []; };
     const naturalCompare = (a,b)=>{
       const sa=String(a), sb=String(b);
@@ -256,6 +303,72 @@
       rooms:[], // [{id, capacity, offDays:[]}]
       schedule:[],pairings:new Map()
     };
+
+    // دوال الأسماء
+    function parseNamesFromTextarea(text){
+      return text.split('\n')
+        .map(line=>line.trim())
+        .filter(name=>name.length>0);
+    }
+
+    function generateDefaultNamesForCat(prefix, count){
+      const names = [];
+      for(let i=1; i<=count; i++){
+        names.push(prefix + i);
+      }
+      return names;
+    }
+
+    function updateTextareasFromCounts(){
+      const cntA = parseInt(byId('cntA').value) || 0;
+      const cntB = parseInt(byId('cntB').value) || 0;
+      const cntC = parseInt(byId('cntC').value) || 0;
+      const cntD = parseInt(byId('cntD').value) || 0;
+      
+      const currentA = parseNamesFromTextarea(byId('namesA').value);
+      const currentB = parseNamesFromTextarea(byId('namesB').value);
+      const currentC = parseNamesFromTextarea(byId('namesC').value);
+      const currentD = parseNamesFromTextarea(byId('namesD').value);
+      
+      if(currentA.length !== cntA){
+        byId('namesA').value = generateDefaultNamesForCat('A', cntA).join('\n');
+      }
+      if(currentB.length !== cntB){
+        byId('namesB').value = generateDefaultNamesForCat('B', cntB).join('\n');
+      }
+      if(currentC.length !== cntC){
+        byId('namesC').value = generateDefaultNamesForCat('C', cntC).join('\n');
+      }
+      if(currentD.length !== cntD){
+        byId('namesD').value = generateDefaultNamesForCat('D', cntD).join('\n');
+      }
+    }
+
+    // أزرار الأسماء
+    byId('generateDefaultNames').addEventListener('click', ()=>{
+      const cntA = parseInt(byId('cntA').value) || 0;
+      const cntB = parseInt(byId('cntB').value) || 0;
+      const cntC = parseInt(byId('cntC').value) || 0;
+      const cntD = parseInt(byId('cntD').value) || 0;
+      
+      byId('namesA').value = generateDefaultNamesForCat('A', cntA).join('\n');
+      byId('namesB').value = generateDefaultNamesForCat('B', cntB).join('\n');
+      byId('namesC').value = generateDefaultNamesForCat('C', cntC).join('\n');
+      byId('namesD').value = generateDefaultNamesForCat('D', cntD).join('\n');
+    });
+
+    byId('clearNames').addEventListener('click', ()=>{
+      byId('namesA').value = '';
+      byId('namesB').value = '';
+      byId('namesC').value = '';
+      byId('namesD').value = '';
+    });
+
+    // تحديث الأسماء عند تغير الأعداد
+    byId('cntA').addEventListener('change', updateTextareasFromCounts);
+    byId('cntB').addEventListener('change', updateTextareasFromCounts);
+    byId('cntC').addEventListener('change', updateTextareasFromCounts);
+    byId('cntD').addEventListener('change', updateTextareasFromCounts);
 
     function parseOffDays(str, maxDay){
       return String(str||'')
@@ -317,11 +430,10 @@
       renderRoomsEditor();
     });
 
-    // قراءة المُدخلات
+    // قراءة المُدخلات (معدلة لقراءة الأسماء من textarea)
     window.readInputs=function(){
       const s=window.state;
       const safeNum=(id,def)=>{ const el=byId(id); if(!el) return def; const v=parseInt((el.value||'').toString(),10); return Number.isFinite(v)? v : def; };
-      const seq=(p,n)=>{const a=[];for(let i=1;i<=n;i++) a.push(p+String(i)); return a};
 
       s.days=safeNum('days',0);
       s.reserves=safeNum('reserves',0);
@@ -329,8 +441,18 @@
       s.avoidPairs       = !!(byId('avoidPairs') && byId('avoidPairs').checked);
       s.avoidSameRoom    = !!(byId('avoidSameRoom') && byId('avoidSameRoom').checked);
 
-      s.cats={A:seq('A',safeNum('cntA',0)), B:seq('B',safeNum('cntB',0)), C:seq('C',safeNum('cntC',0)), D:seq('D',safeNum('cntD',0))};
-      s.monitors=[]; for(const [cat,list] of Object.entries(s.cats)){ list.forEach(name=> s.monitors.push({name,cat,assigned:[], target:0, get count(){return this.assigned.length}})); }
+      // قراءة الأسماء من textareas
+      const namesA = parseNamesFromTextarea(byId('namesA').value);
+      const namesB = parseNamesFromTextarea(byId('namesB').value);
+      const namesC = parseNamesFromTextarea(byId('namesC').value);
+      const namesD = parseNamesFromTextarea(byId('namesD').value);
+      
+      s.cats = {A:namesA, B:namesB, C:namesC, D:namesD};
+      
+      s.monitors=[]; 
+      for(const [cat,list] of Object.entries(s.cats)){ 
+        list.forEach(name=> s.monitors.push({name,cat,assigned:[], target:0, get count(){return this.assigned.length}})); 
+      }
 
       s.rooms = s.rooms
         .filter(r=> (r.id||'').trim() && Number.isFinite(r.capacity) && r.capacity>0)
@@ -580,9 +702,18 @@
 
     // العرض
     window.render=function(){
-      const s=window.state; const sched=$('#schedule'); const warnBox=$('#warnings'); const statsBox=$('#stats'); const repBox=$('#repeats');
-      sched.innerHTML=''; warnBox.innerHTML=''; statsBox.innerHTML=''; repBox.innerHTML='';
+      const s=window.state; 
+      const sched=$('#schedule'); 
+      const warnBox=$('#warnings'); 
+      const statsBox=$('#stats'); 
+      const repBox=$('#repeats');
+      
+      sched.innerHTML=''; 
+      warnBox.innerHTML=''; 
+      statsBox.innerHTML=''; 
+      repBox.innerHTML='';
 
+      // تجميع التحذيرات
       const warnings=[];
       for(const dp of s.schedule){
         if(dp.warnings.length) warnings.push(...dp.warnings.map(w=>`اليوم ${dp.day}: ${w}`));
@@ -590,6 +721,7 @@
       }
       warnBox.innerHTML = warnings.length? warnings.map(w=>`<div class="warn">${w}</div>`).join('') : '<div class="ok">✅ تم إنشاء جدول يراعي الشروط قدر الإمكان.</div>';
 
+      // عرض الجدول اليومي
       for(const dp of s.schedule){
         const dayEl=document.createElement('div'); dayEl.className='day'; dayEl.innerHTML=`<h3>اليوم ${dp.day}</h3>`;
         const roomsSorted = dp.rooms.slice().sort((a,b)=> naturalCompare(a.id,b.id));
@@ -602,29 +734,63 @@
         }
         const resNames=dp.reserves.map(m=>ltr(m.name)).join(' • ')||'—';
         const res=document.createElement('div'); res.className='room'; res.innerHTML=`<div class="room-header"><div><b>الاحتياط</b></div><div class="small">${resNames}</div></div>`;
-        dayEl.appendChild(res); sched.appendChild(dayEl);
+        dayEl.appendChild(res); 
+        sched.appendChild(dayEl);
       }
 
+      // الإحصائيات
       const monsOrdered = byCatOrder(s.monitors);
-      const rows = monsOrdered.map(m=>{
-        const items=m.assigned.map(a=> a.type==='room'? `يوم ${a.day} – ${a.roomId}` : `يوم ${a.day} – احتياط`);
-        return {name:m.name,cat:m.cat,count:m.count,details:items.join(' | ')};
-      });
+      
+      let tableHTML = '<div class="table-wrapper"><table class="stats-table"><thead><tr>';
+      tableHTML += '<th>المعرف</th><th>الصنف</th><th>إجمالي التكليفات</th>';
+      
+      for(let day=1; day<=s.days; day++){
+        tableHTML += `<th>اليوم ${day}</th>`;
+      }
+      tableHTML += '</tr></thead><tbody>';
+      
+      for(const m of monsOrdered){
+        const dailyAssignments = new Array(s.days).fill(null);
+        
+        for(const a of m.assigned){
+          const dayIndex = a.day - 1;
+          if(a.type === 'room'){
+            dailyAssignments[dayIndex] = a.roomId;
+          } else if(a.type === 'reserve'){
+            dailyAssignments[dayIndex] = 'احتياط';
+          }
+        }
+        
+        tableHTML += '<tr>';
+        tableHTML += `<td><span class="id-ltr">${m.name}</span></td>`;
+        tableHTML += `<td>${m.cat}</td>`;
+        tableHTML += `<td><strong>${m.count}</strong></td>`;
+        
+        for(let day=0; day<s.days; day++){
+          const value = dailyAssignments[day];
+          if(value === null){
+            tableHTML += '<td class="dash-cell">—</td>';
+          } else if(value === 'احتياط'){
+            tableHTML += `<td class="reserve-cell">${value}</td>`;
+          } else {
+            tableHTML += `<td class="room-cell">${value}</td>`;
+          }
+        }
+        
+        tableHTML += '</tr>';
+      }
+      
+      tableHTML += '</tbody></table></div>';
+      statsBox.innerHTML = tableHTML;
 
-      // حساب الفارق بدون صنف D
-      const abcRows = rows.filter(r=> r.cat!=='D');
+      // حساب الفارق
+      const abcRows = monsOrdered.filter(r=> r.cat!=='D');
       const countsABC = abcRows.map(r=>r.count);
       const maxC = countsABC.length? Math.max(...countsABC) : 0;
       const minC = countsABC.length? Math.min(...countsABC) : 0;
 
-      const table=document.createElement('table'); table.className='stats-table';
-      table.innerHTML=`<thead><tr><th>المعرف</th><th>الصنف</th><th>عدد التكليفات</th><th>التفاصيل</th></tr></thead><tbody>${
-        rows.map(r=>`<tr><td><span class="id-ltr">${r.name}</span></td><td>${r.cat}</td><td>${r.count}</td><td>${r.details||'—'}</td></tr>`).join('')
-      }</tbody>`;
-      statsBox.appendChild(table);
-
       const summary=document.createElement('div'); summary.className='small';
-      summary.innerHTML=`(باستثناء الصنف D) أكثر عدد: <b>${maxC}</b> • أقل عدد: <b>${minC}</b> • الفارق: <b>${maxC-minC}</b>`;
+      summary.innerHTML = `<br>(باستثناء الصنف D) أكثر عدد: <b>${maxC}</b> • أقل عدد: <b>${minC}</b> • الفارق: <b>${maxC-minC}</b>`;
       statsBox.appendChild(summary);
 
       if(maxC - minC > 2){
@@ -633,6 +799,7 @@
         statsBox.appendChild(alert);
       }
 
+      // تحليل التكرارات
       const {sameRoom,repeatedPairs,stats}=analyzeRepeats();
       const blocks=[];
       blocks.push(`<div class="subhead">🔁 تكرار نفس القاعة لنفس الشخص</div>`);
@@ -651,7 +818,7 @@
       repBox.innerHTML = blocks.join('');
     };
 
-    // حفظ ملف
+    // دوال التصدير (كما هي مع تعديل بسيط)
     function saveFile(blob, filename){
       if(window.navigator && typeof window.navigator.msSaveOrOpenBlob === 'function'){
         window.navigator.msSaveOrOpenBlob(blob, filename); return;
@@ -661,7 +828,6 @@
       setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); }, 50);
     }
 
-    // التصدير كما هو
     window.exportExcel=function(){
       if(!window.XLSX || document.documentElement.dataset.noxlsx){ alert('مكتبة Excel غير متاحة. استخدم CSV أو فعّل الاتصال مؤقتاً، أو ضمّن نسخة محلية.'); return; }
       const s=window.state; if(!s.schedule.length){alert('لم يتم إنشاء جدول بعد.');return;}
@@ -678,12 +844,27 @@
       }
       const ws1=XLSX.utils.aoa_to_sheet(sheet1); XLSX.utils.book_append_sheet(wb,ws1,'الجدول');
 
-      const sheet2=[["المعرف","الصنف","عدد التكليفات","الأيام/القاعات"]];
       const monsOrdered = byCatOrder(s.monitors);
-      for(const m of monsOrdered){
-        const details=m.assigned.map(a=> a.type==='room'? `يوم ${a.day} – ${a.roomId}` : `يوم ${a.day} – احتياط`).join(' | ');
-        sheet2.push([stripBidi(m.name),m.cat,m.count,details]);
+      const sheet2Header = ["المعرف","الصنف","إجمالي التكليفات"];
+      for(let day=1; day<=s.days; day++){
+        sheet2Header.push(`اليوم ${day}`);
       }
+      const sheet2 = [sheet2Header];
+      
+      for(const m of monsOrdered){
+        const dailyAssignments = new Array(s.days).fill('-');
+        for(const a of m.assigned){
+          const dayIndex = a.day - 1;
+          if(a.type === 'room'){
+            dailyAssignments[dayIndex] = a.roomId;
+          } else if(a.type === 'reserve'){
+            dailyAssignments[dayIndex] = 'احتياط';
+          }
+        }
+        const row = [stripBidi(m.name), m.cat, m.count, ...dailyAssignments];
+        sheet2.push(row);
+      }
+      
       const ws2=XLSX.utils.aoa_to_sheet(sheet2); XLSX.utils.book_append_sheet(wb,ws2,'إحصائية');
 
       const {sameRoom,repeatedPairs,stats}=analyzeRepeats();
@@ -719,12 +900,29 @@
     window.exportStatsCSV=function(){
       const s=window.state; if(!s.schedule.length){alert('لم يتم إنشاء جدول بعد.');return;}
       const monsOrdered = byCatOrder(s.monitors);
-      const lines=[["المعرف","الصنف","عدد التكليفات","الأيام/القاعات"].join(',')];
+      
+      const header = ["المعرف","الصنف","إجمالي التكليفات"];
+      for(let day=1; day<=s.days; day++){
+        header.push(`اليوم ${day}`);
+      }
+      
+      const lines = [header.join(',')];
+      
       for(const m of monsOrdered){
-        const details=m.assigned.map(a=> a.type==='room'? `يوم ${a.day} – ${a.roomId}` : `يوم ${a.day} – احتياط`).join(' | ');
-        const row=[stripBidi(m.name),m.cat,m.count,details||'—'].map(v=> '"'+String(v).replace(/"/g,'""')+'"').join(',');
+        const dailyAssignments = new Array(s.days).fill('-');
+        for(const a of m.assigned){
+          const dayIndex = a.day - 1;
+          if(a.type === 'room'){
+            dailyAssignments[dayIndex] = a.roomId;
+          } else if(a.type === 'reserve'){
+            dailyAssignments[dayIndex] = 'احتياط';
+          }
+        }
+        
+        const row = [stripBidi(m.name), m.cat, m.count, ...dailyAssignments].map(v=> '"'+String(v).replace(/"/g,'""')+'"').join(',');
         lines.push(row);
       }
+      
       const bom='\uFEFF'; const csv = bom + lines.join('\r\n');
       const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
       saveFile(blob, `احصائية_المراقبين_${new Date().toISOString().slice(0,10)}.csv`);
@@ -770,6 +968,8 @@
 
     // تهيئة
     renderRoomsEditor();
+    updateTextareasFromCounts(); // تحديث الأسماء الافتراضية
+    
     setTimeout(()=>{ if(!window.XLSX || document.documentElement.dataset.noxlsx){ const btn=document.getElementById('exportExcel'); if(btn) btn.style.display='none'; } }, 800);
   })();
   </script>
